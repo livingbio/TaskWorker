@@ -5,4 +5,4 @@ builtins:
 
 handlers:
 - url: /_task(/.*)?
-  script: index.app
+  script: TaskWorker.index.app

@@ -39,7 +39,7 @@ class TriggerHandler(ApiHandler):
         else:
             r = urlfetch.fetch(
                 url=path,
-                method=urlfetch.POST
+                method=urlfetch.POST,
                 payload=params
             )
 
