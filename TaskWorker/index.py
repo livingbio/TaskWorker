@@ -4,9 +4,9 @@ import urllib
 from handlers import ApiHandler
 from google.appengine.api import urlfetch
 from google.appengine.ext import ndb
+import logging
 
-
-class __TA_Task(ndb.Model):
+class _TA_Task(ndb.Model):
 
     """store task & pipeline mapping
     """
@@ -15,11 +15,17 @@ class __TA_Task(ndb.Model):
     created = ndb.DateTimeProperty(auto_now_add=True)
     updated = ndb.DateTimeProperty(auto_now=True)
 
-    parmas = ndb.JsonProperty()
+    params = ndb.JsonProperty()
 
     @property
     def job_id(self):
         return self.key.id()
+
+
+def load_pipeline(cls_path):
+    module_path, class_name = ".".join(cls_path.split('.')[:-1]), cls_path.split('.')[-1]
+    mod = __import__(module_path, fromlist=[class_name])
+    return getattr(mod, class_name)
 
 
 class TriggerHandler(ApiHandler):
@@ -27,35 +33,26 @@ class TriggerHandler(ApiHandler):
     def get(self):
         id = self.request.get("id")
         path = self.request.get("path")
+        cls_path = self.request.get("cls")
         method = self.request.get("method", "get")
         params = self.request.get("params", "")
 
         method = method.lower()
-        assert path
+        assert path or cls_path
         assert method in ("get", "post")
 
-        if method == "get":
-            r = urlfetch.fetch(url=path + "?" + params)
-        else:
-            r = urlfetch.fetch(
-                url=path,
-                method=urlfetch.POST,
-                payload=params
-            )
+        cls = load_pipeline(cls_path)
+        p = cls(*params)
+        p.start()
 
-        assert r.status_code == 200
-        data = json.loads(r.content)
-        assert "root_pipeline_id" in data
-        root_pipeline_id = data["root_pipeline_id"]
+        task_id = id or p.root_pipeline_id
 
-        # if not assign id, will use root_pipeline_id instead
-        task_id = id or root_pipeline_id
-
-        __TA_Task(
+        _TA_Task(
             id=task_id,
-            root_pipeline_id=root_pipeline_id,
+            root_pipeline_id=p.root_pipeline_id,
             params={
                 "id": id,
+                "cls": cls_path,
                 "method": method,
                 "path": path,
                 "params": params
@@ -63,7 +60,7 @@ class TriggerHandler(ApiHandler):
         ).put()
 
         return self.output({
-            id: task_id
+            "id": task_id
         })
 
 
@@ -75,14 +72,14 @@ class StatusHandler(ApiHandler):
         assert id or pipeline_id
 
         if id:
-            task = __TA_Task.get_by_id(id)
+            task = _TA_Task.get_by_id(id)
             assert task and task.root_pipeline_id
             root_pipeline_id = task.root_pipeline_id
         else:
             root_pipeline_id = pipeline_id
 
         r = urlfetch.fetch(
-            url='/_ah/pipeline/rpc/tree?root_pipeline_id={}'.format(root_pipeline_id)
+            url=self.request.host_url + '/_ah/pipeline/rpc/tree?root_pipeline_id={}'.format(root_pipeline_id)
         )
         assert r.status_code == 200
 
@@ -99,7 +96,7 @@ class StopHandler(ApiHandler):
         assert id or pipeline_id
 
         if id:
-            task = __TA_Task.get_by_id(id)
+            task = _TA_Task.get_by_id(id)
             assert task and task.root_pipeline_id
             root_pipeline_id = task.root_pipeline_id
         else:
@@ -109,7 +106,7 @@ class StopHandler(ApiHandler):
         pipeline_key = str(pipeline.key())
 
         r = urlfetch.fetch(
-            url="/_ah/pipeline/abort",
+            url=self.request.host_url + "/_ah/pipeline/abort",
             method=urlfetch.POST,
             payload=urllib.urlencode({
                 "pipeline_key": pipeline_key,
