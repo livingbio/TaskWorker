@@ -29,20 +29,25 @@ def load_pipeline(cls_path):
 
 
 class TriggerHandler(ApiHandler):
+    def post(self):
+        self.get()
 
     def get(self):
         id = self.request.get("id")
         path = self.request.get("path")
-        cls_path = self.request.get("cls")
-        method = self.request.get("method", "get")
-        params = self.request.get("params", "")
+        args = self.request.get("args")
+        kwargs = self.request.get("kwargs")
 
-        method = method.lower()
-        assert path or cls_path
-        assert method in ("get", "post")
+        assert path
 
-        cls = load_pipeline(cls_path)
-        p = cls(*params)
+        args = json.loads(args) if args else []
+        kwargs = json.loads(kwargs) if kwargs else {}
+
+        assert isinstance(args, list)
+        assert isinstance(kwargs, dict)
+
+        cls = load_pipeline(path)
+        p = cls(*args, **kwargs)
         p.start()
 
         task_id = id or p.root_pipeline_id
@@ -52,10 +57,11 @@ class TriggerHandler(ApiHandler):
             root_pipeline_id=p.root_pipeline_id,
             params={
                 "id": id,
-                "cls": cls_path,
-                "method": method,
                 "path": path,
-                "params": params
+                "params": {
+                    "args": args,
+                    "kwargs": kwargs
+                }
             }
         ).put()
 
