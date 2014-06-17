@@ -107,7 +107,7 @@ class StatusHandler(ApiHandler):
         self.output({
             "id": id,
             "status": self.STATUS_MAP[root_pipeline['status']],
-            "msg": root_pipeline['lastRetryMessage'],
+            "msg": root_pipeline.get('lastRetryMessage'),
             "output": outputs
         })
 
