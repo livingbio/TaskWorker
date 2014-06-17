@@ -1,9 +1,11 @@
 import webapp2
 import json
 import urllib
+import pipeline
+import pipeline.models
 from handlers import ApiHandler
-from google.appengine.api import urlfetch
-from google.appengine.ext import ndb
+from google.appengine.api import taskqueue
+from google.appengine.ext import ndb, db
 import logging
 
 class _TA_Task(ndb.Model):
@@ -71,6 +73,14 @@ class TriggerHandler(ApiHandler):
 
 
 class StatusHandler(ApiHandler):
+    STATUS_MAP = {
+        'finalizing': "WORKING",
+        'retry': "WORKING",
+        "waiting": "WORKING",
+        'run': "WORKING",
+        'done': "DONE",
+        "aborted": "FAILED"
+    }
 
     def get(self):
         id = self.request.get("id")
@@ -84,15 +94,22 @@ class StatusHandler(ApiHandler):
         else:
             root_pipeline_id = pipeline_id
 
-        r = urlfetch.fetch(
-            url=self.request.host_url + '/_ah/pipeline/rpc/tree?root_pipeline_id={}'.format(root_pipeline_id)
-        )
-        assert r.status_code == 200
+        r = pipeline.get_status_tree(root_pipeline_id)
+        assert 'pipelines' in r and root_pipeline_id in r['pipelines']
 
-        r = json.loads(r.content)
+        root_pipeline = r['pipelines'][root_pipeline_id]
+        outputs = root_pipeline["outputs"]
+        outputs = zip(outputs.keys(), db.get(outputs.values()))
+        outputs = {k[0]: k[1] if k[1].status == pipeline.models._SlotRecord.FILLED else None for k in outputs}
 
-        self.output(r)
+        assert root_pipeline['status'] in self.STATUS_MAP
 
+        self.output({
+            "id": id,
+            "status": self.STATUS_MAP[root_pipeline['status']],
+            "msg": root_pipeline['lastRetryMessage'],
+            "output": outputs
+        })
 
 class StopHandler(ApiHandler):
 
@@ -108,18 +125,17 @@ class StopHandler(ApiHandler):
         else:
             root_pipeline_id = pipeline_id
 
-        pipeline = Pipeline.from_id(root_pipeline_id)
-        pipeline_key = str(pipeline.key())
+        pipeline_key = db.Key.from_path(pipeline.models._PipelineRecord.kind(), root_pipeline_id)
 
-        r = urlfetch.fetch(
-            url=self.request.host_url + "/_ah/pipeline/abort",
-            method=urlfetch.POST,
-            payload=urllib.urlencode({
+        taskqueue.add(
+            url="/mapreduce/pipeline/abort",
+            method='POST',
+            params={
                 "pipeline_key": pipeline_key,
                 "purpose": "abort"
-            }))
+            }
+        )
 
-        assert r.status_code == 200
         return self.output({
             "id": id
         })
