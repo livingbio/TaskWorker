@@ -100,7 +100,7 @@ class StatusHandler(ApiHandler):
         root_pipeline = r['pipelines'][root_pipeline_id]
         outputs = root_pipeline["outputs"]
         outputs = zip(outputs.keys(), db.get(outputs.values()))
-        outputs = {k[0]: k[1] if k[1].status == pipeline.models._SlotRecord.FILLED else None for k in outputs}
+        outputs = {k[0]: k[1].value if k[1].status == pipeline.models._SlotRecord.FILLED else None for k in outputs}
 
         assert root_pipeline['status'] in self.STATUS_MAP
 
