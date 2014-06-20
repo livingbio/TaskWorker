@@ -1,8 +1,8 @@
 import webapp2
 import json
 import urllib
-import pipeline
-import pipeline.models
+import mapreduce.third_party.pipeline as pipeline
+import mapreduce.third_party.pipeline.models as pipeline_models
 from handlers import ApiHandler
 from google.appengine.api import taskqueue
 from google.appengine.ext import ndb, db
@@ -100,7 +100,7 @@ class StatusHandler(ApiHandler):
         root_pipeline = r['pipelines'][root_pipeline_id]
         outputs = root_pipeline["outputs"]
         outputs = zip(outputs.keys(), db.get(outputs.values()))
-        outputs = {k[0]: k[1] if k[1].status == pipeline.models._SlotRecord.FILLED else None for k in outputs}
+        outputs = {k[0]: k[1].value if k[1].status == pipeline_models._SlotRecord.FILLED else None for k in outputs}
 
         assert root_pipeline['status'] in self.STATUS_MAP
 
@@ -125,7 +125,7 @@ class StopHandler(ApiHandler):
         else:
             root_pipeline_id = pipeline_id
 
-        pipeline_key = db.Key.from_path(pipeline.models._PipelineRecord.kind(), root_pipeline_id)
+        pipeline_key = db.Key.from_path(pipeline_models._PipelineRecord.kind(), root_pipeline_id)
 
         taskqueue.add(
             url="/mapreduce/pipeline/abort",
