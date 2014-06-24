@@ -1,0 +1,9 @@
+unittest2
+webtest
+pillow
+nose
+lxml
+fake-factory
+mock
+nose-cov
+coverage
