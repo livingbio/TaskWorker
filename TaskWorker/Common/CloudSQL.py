@@ -9,7 +9,10 @@ class Execute(base_handler.PipelineBase):
         db = MySQLdb.connect(unix_socket="/cloudsql/" + instance, db=database, user="root")
         try:
             cursor = db.cursor()
-            cursor.execute(query, values)
+            if values:
+                cursor.execute(query, values)
+            else:
+                cursor.execute(query)
             db.commit()
             return cursor.fetchall()
         except MySQLdb.Error, e:
@@ -25,7 +28,7 @@ class ExecuteMany(base_handler.PipelineBase):
         db = MySQLdb.connect(unix_socket="/cloudsql/" + instance, db=database, user="root")
         try:
             cursor = db.cursor()
-            cursor.excutemany(query, values)
+            cursor.executemany(query, values)
             db.commit()
             return cursor.fetchall()
         except MySQLdb.Error, e:
