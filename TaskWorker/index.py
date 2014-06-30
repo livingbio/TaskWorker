@@ -1,12 +1,13 @@
 import webapp2
 import json
 import urllib
+import logging
 import mapreduce.third_party.pipeline as pipeline
 import mapreduce.third_party.pipeline.models as pipeline_models
-from handlers import ApiHandler
-from google.appengine.api import taskqueue
+from handlers import ApiHandler, PermissionError
+from google.appengine.api import taskqueue, users, memcache
 from google.appengine.ext import ndb, db
-import logging
+from .config import *
 
 class _TA_Task(ndb.Model):
 
@@ -24,13 +25,46 @@ class _TA_Task(ndb.Model):
         return self.key.id()
 
 
+class TaskAuthHandler(ApiHandler):
+    def dispatch(self):
+        token = self.request.get("token")
+        assert token, PermissionError("login required")
+        token_expire = memcache.get("token")
+
+        if isinstance(token_expire, datetime) and token_expire > datetime.utcnow():
+            return super(self, TaskAuthApiHandler).dispatch()
+
+        raise PermissionError("token is not correct")
+
+
+class LoginHandler(webapp2.RequestHandler):
+    def login(self):
+        import os, base64
+        token = LOGIN_TOKEN_PREFIX + base64.b64encode(os.urandom(15))
+
+        memcache.set(token, token, DEFAULT_LOGIN_EXPIRE_SECONDS)
+        self.response.out.write(josn.dumps({"token": token}))
+
+    def post(self):
+        from Crypto.PublicKey import RSA
+
+        if users.is_current_user_admin():
+            return self.login()
+
+        else:
+            key = self.request.get("key")
+            assert key
+            assert key == AUTH_KEY, PermissionError("login failed")
+            return self.login()
+
+
 def load_pipeline(cls_path):
     module_path, class_name = ".".join(cls_path.split('.')[:-1]), cls_path.split('.')[-1]
     mod = __import__(module_path, fromlist=[class_name])
     return getattr(mod, class_name)
 
 
-class TriggerHandler(ApiHandler):
+class TriggerHandler(LoginHandler):
     def post(self):
         self.get()
 
@@ -72,7 +106,7 @@ class TriggerHandler(ApiHandler):
         })
 
 
-class StatusHandler(ApiHandler):
+class StatusHandler(LoginHandler):
     STATUS_MAP = {
         'finalizing': "WORKING",
         'retry': "WORKING",
@@ -111,7 +145,7 @@ class StatusHandler(ApiHandler):
             "output": outputs
         })
 
-class StopHandler(ApiHandler):
+class StopHandler(LoginHandler):
 
     def get(self):
         id = self.request.get("id")
@@ -140,8 +174,14 @@ class StopHandler(ApiHandler):
             "id": id
         })
 
+config = {}
+config['webapp2_extras.sessions'] = {
+    'secret_key': 'my-super-secret-key'
+}
+
 app = webapp2.WSGIApplication([
+    (r'.*/login', LoginHandler),
     (r'.*/trigger', TriggerHandler),
     (r'.*/status', StatusHandler),
     (r'.*/stop', StopHandler),
-], debug=True)
+], debug=True, config=config)

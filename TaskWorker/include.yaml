@@ -6,4 +6,7 @@ builtins:
 handlers:
 - url: /_task(/.*)?
   script: TaskWorker.index.app
-  # login: admin
+
+- url: /_ah/task/login
+  script: TaskWorker.index.app
+  login: admin
