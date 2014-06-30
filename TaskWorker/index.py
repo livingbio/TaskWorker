@@ -4,7 +4,7 @@ import urllib
 import logging
 import mapreduce.third_party.pipeline as pipeline
 import mapreduce.third_party.pipeline.models as pipeline_models
-from handlers import ApiHandler, PermissionError
+from handlers import ApiHandler, PermissionDeniedError
 from google.appengine.api import taskqueue, users, memcache
 from google.appengine.ext import ndb, db
 from .config import *
@@ -27,34 +27,42 @@ class _TA_Task(ndb.Model):
 
 class TaskAuthHandler(ApiHandler):
     def dispatch(self):
-        token = self.request.get("token")
-        assert token, PermissionError("login required")
-        token_expire = memcache.get("token")
-
-        if isinstance(token_expire, datetime) and token_expire > datetime.utcnow():
-            return super(self, TaskAuthApiHandler).dispatch()
-
-        raise PermissionError("token is not correct")
+        try:
+            token = self.request.get("token") or self.request.cookies.get("token")
+            assert token and token.startswith(LOGIN_TOKEN_PREFIX) and memcache.get(token), PermissionDeniedError("login failed")
+            return super(TaskAuthHandler, self).dispatch()
+        except Exception, e:
+            self.handle_exception(e, False)
 
 
 class LoginHandler(webapp2.RequestHandler):
     def login(self):
         import os, base64
+        from datetime import datetime, timedelta
         token = LOGIN_TOKEN_PREFIX + base64.b64encode(os.urandom(15))
 
         memcache.set(token, token, DEFAULT_LOGIN_EXPIRE_SECONDS)
-        self.response.out.write(josn.dumps({"token": token}))
+        self.response.out.write(json.dumps({"token": token}))
+        self.response.set_cookie("token", token, expires=datetime.utcnow() + timedelta(seconds=DEFAULT_LOGIN_EXPIRE_SECONDS))
+
+
+    def get(self):
+        self.post()
 
     def post(self):
-        from Crypto.PublicKey import RSA
+        token = self.request.cookies.get("token")
+        if token and token.startswith(LOGIN_TOKEN_PREFIX) and memcache.get(token):
+            # use previous token
+            return self.response.out.write(json.dumps({"token": token}))
 
         if users.is_current_user_admin():
+            # user is login via Google Account
             return self.login()
 
         else:
             key = self.request.get("key")
             assert key
-            assert key == AUTH_KEY, PermissionError("login failed")
+            assert key == AUTH_KEY, PermissionDeniedError("login failed")
             return self.login()
 
 
@@ -64,7 +72,7 @@ def load_pipeline(cls_path):
     return getattr(mod, class_name)
 
 
-class TriggerHandler(LoginHandler):
+class TriggerHandler(TaskAuthHandler):
     def post(self):
         self.get()
 
@@ -106,7 +114,7 @@ class TriggerHandler(LoginHandler):
         })
 
 
-class StatusHandler(LoginHandler):
+class StatusHandler(TaskAuthHandler):
     STATUS_MAP = {
         'finalizing': "WORKING",
         'retry': "WORKING",
@@ -145,7 +153,7 @@ class StatusHandler(LoginHandler):
             "output": outputs
         })
 
-class StopHandler(LoginHandler):
+class StopHandler(TaskAuthHandler):
 
     def get(self):
         id = self.request.get("id")
@@ -174,14 +182,9 @@ class StopHandler(LoginHandler):
             "id": id
         })
 
-config = {}
-config['webapp2_extras.sessions'] = {
-    'secret_key': 'my-super-secret-key'
-}
-
 app = webapp2.WSGIApplication([
     (r'.*/login', LoginHandler),
     (r'.*/trigger', TriggerHandler),
     (r'.*/status', StatusHandler),
     (r'.*/stop', StopHandler),
-], debug=True, config=config)
+], debug=True)
