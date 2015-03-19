@@ -11,7 +11,7 @@ class Log2Gs(base_handler.PipelineBase):
     """A pipeline to ingest log as CSV in Google Storage
     """
 
-    def run(self, name, mapper, start_time, end_time, version_ids, gsbucketname, shards=255):
+    def run(self, name, mapper, start_time, end_time, version_ids=None, module_versions=None, gsbucketname, shards=255):
         yield Mapper(
             name,
             mapper,
@@ -22,6 +22,7 @@ class Log2Gs(base_handler.PipelineBase):
                     "start_time": start_time,
                     "end_time": end_time,
                     "version_ids": version_ids,
+                    "module_versions": module_versions,
                 },
                 "output_writer": {
                     "filesystem": "gs",
@@ -38,8 +39,8 @@ class Log2Bq(base_handler.PipelineBase):
     """A pipeline to ingest log as CSV in Google Big Query
     """
 
-    def run(self, name, mapper, start_time, end_time, version_ids, gsbucketname, bqproject, bqdataset, table, fields, overwrite):
-        files = yield Log2Gs(name, mapper, start_time, end_time, version_ids, gsbucketname)
+    def run(self, name, mapper, start_time, end_time, version_ids=None, module_versions=None, gsbucketname, bqproject, bqdataset, table, fields, overwrite):
+        files = yield Log2Gs(name, mapper, start_time, end_time, version_ids, module_versions, gsbucketname)
         yield Gs2Bq(files, bqproject, bqdataset, table, fields, overwrite=overwrite)
 
 
