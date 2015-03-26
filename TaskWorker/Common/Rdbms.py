@@ -1,5 +1,5 @@
 from mapreduce import base_handler, mapreduce_pipeline
-import mapreduce.third_party.pipeline.common as pipeline_common
+import pipeline.common as pipeline_common
 import MySQLdb
 # use the recommand way to connect database
 # https://developers.google.com/appengine/docs/python/cloud-sql/?hl=zh-TW

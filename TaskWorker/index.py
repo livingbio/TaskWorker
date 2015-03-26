@@ -1,8 +1,8 @@
 import webapp2
 import json
 import urllib
-import mapreduce.third_party.pipeline as pipeline
-import mapreduce.third_party.pipeline.models as pipeline_models
+import pipeline as pipeline
+import pipeline.models as pipeline_models
 from handlers import ApiHandler
 from google.appengine.api import taskqueue
 from google.appengine.ext import ndb, db
