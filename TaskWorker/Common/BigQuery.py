@@ -1,7 +1,7 @@
 from mapreduce import base_handler
 from oauth2client.appengine import AppAssertionCredentials
-import mapreduce.third_party.pipeline as pipeline
-import mapreduce.third_party.pipeline.common as pipeline_common
+import pipeline as pipeline
+import pipeline.common as pipeline_common
 import logging
 
 # define some common query

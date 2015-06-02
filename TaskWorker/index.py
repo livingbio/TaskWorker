@@ -2,10 +2,10 @@ import webapp2
 import json
 import urllib
 import logging
-import mapreduce.third_party.pipeline as pipeline
-import mapreduce.third_party.pipeline.models as pipeline_models
 from handlers import ApiHandler, PermissionDeniedError
 from google.appengine.api import taskqueue, users, memcache
+import pipeline as pipeline
+import pipeline.models as pipeline_models
 from google.appengine.ext import ndb, db
 from .config import *
 
