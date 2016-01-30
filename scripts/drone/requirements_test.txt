@@ -1,9 +1,44 @@
-unittest2
-webtest
-pillow
-nose
-lxml
-fake-factory
-mock
-nose-cov
-coverage
+# The new features in unittest backported to Python 2.4+.
+# https://pypi.python.org/pypi/unittest2/1.1.0
+unittest2==1.1.0
+
+
+# Helper to test WSGI applications
+# https://pypi.python.org/pypi/WebTest/2.0.20
+WebTest==2.0.20
+
+
+# Python Imaging Library (Fork)
+# https://pypi.python.org/pypi/Pillow/3.1.0
+Pillow==3.1.0
+
+
+# nose extends unittest to make testing easier
+# https://pypi.python.org/pypi/nose/1.3.7
+nose==1.3.7
+
+
+# Powerful and Pythonic XML processing library combining libxml2/libxslt with the ElementTree API.
+# https://pypi.python.org/pypi/lxml/3.5.0
+lxml==3.5.0
+
+
+# Faker is a Python package that generates fake data for you.
+# https://pypi.python.org/pypi/fake-factory/0.5.3
+fake-factory==0.5.3
+
+
+# Rolling backport of unittest.mock for all Pythons
+# https://pypi.python.org/pypi/mock/1.3.0
+mock==1.3.0
+
+
+# nose plugin for coverage reporting, including subprocesses and multiprocessing
+# https://pypi.python.org/pypi/nose-cov/1.6
+nose-cov==1.6
+
+
+# Code coverage measurement for Python
+# https://pypi.python.org/pypi/coverage/4.1b2
+coverage==4.1b2
+

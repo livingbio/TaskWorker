@@ -1,5 +1,24 @@
-unittest2
-pymysql
-webtest
-webapp2
-mock
+# The new features in unittest backported to Python 2.4+.
+# https://pypi.python.org/pypi/unittest2/1.1.0
+unittest2==1.1.0
+
+
+# Pure Python MySQL Driver
+# https://pypi.python.org/pypi/PyMySQL/0.7.1
+PyMySQL==0.7.1
+
+
+# Helper to test WSGI applications
+# https://pypi.python.org/pypi/WebTest/2.0.20
+WebTest==2.0.20
+
+
+# Taking Google App Engine's webapp to the next level!
+# https://pypi.python.org/pypi/webapp2/2.5.2
+webapp2==2.5.2
+
+
+# Rolling backport of unittest.mock for all Pythons
+# https://pypi.python.org/pypi/mock/1.3.0
+mock==1.3.0
+
