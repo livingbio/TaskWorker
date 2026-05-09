@@ -10,7 +10,7 @@ WebTest==2.0.20
 
 # Python Imaging Library (Fork)
 # https://pypi.python.org/pypi/Pillow/3.1.0
-Pillow==3.1.0
+Pillow==12.2.0
 
 
 # nose extends unittest to make testing easier
